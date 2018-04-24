@@ -1,0 +1,4 @@
+push
+triangle
+10 10 0 50 50 0 100 20 0
+display

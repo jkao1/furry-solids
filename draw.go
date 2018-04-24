@@ -3,6 +3,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -39,7 +40,36 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 		DrawLine(screen, x0, y0, x1, y1)
 		DrawLine(screen, x1, y1, x2, y2)
 		DrawLine(screen, x2, y2, x0, y0)
+
+		FillPolygon(screen, point0, point1, point2)
 	}
+}
+
+// FillPolygon scanline fills a polygon on a screen.
+func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
+	points := [][]float64{p0, p1, p2}
+	points = sortPoints(points)
+	fmt.Println(points)
+}
+
+func sortPoints(points [][]float64) (output [][]float64) {
+	output = make([][]float64, len(points))
+	for {
+		maxY := -1.0
+		maxI := -1
+		for i := 0; i < len(points); i++ {
+			if points[i][1] > maxY {
+				maxY = points[i][1]
+				maxI = i
+			}
+		}
+		output = append(output, points[maxI])
+		points = append(points[:maxI], points[maxI+1:]...)
+		if len(output) == cap(output) {
+			break
+		}
+	}
+	return
 }
 
 // AddPoint adds a point to an edge matrix.
@@ -56,6 +86,14 @@ func AddEdge(m [][]float64, params ...float64) {
 	x1, y1, z1 := params[3], params[4], params[5]
 	AddPoint(m, x0, y0, z0)
 	AddPoint(m, x1, y1, z1)
+}
+
+// AddTriangle adds a triangle to an edge matrix.
+func AddTriangle(m [][]float64, params ...float64) {
+	x0, y0, z0 := params[0], params[1], params[2]
+	x1, y1, z1 := params[3], params[4], params[5]
+	x2, y2, z2 := params[6], params[7], params[8]
+	AddPolygon(m, x0, y0, z0, x1, y1, z1, x2, y2, z2)
 }
 
 // AddPolygon adds a polygon (three points) to an edge matrix.

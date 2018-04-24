@@ -134,9 +134,11 @@ func ParseFile(filename string,
 			AddBox(temp, FloatParams(params)...)
 		} else if line == "torus" {
 			AddTorus(temp, FloatParams(params)...)
+		} else if line == "triangle" {
+			AddTriangle(temp, FloatParams(params)...)
 		}
 		MultiplyMatrices(rcs.Peek(), &temp)
-		if line == "box" || line == "sphere" || line == "torus" {
+		if line == "box" || line == "sphere" || line == "torus" || line == "trianlge" {
 			DrawPolygons(temp, screen)
 		} else {
 			DrawLines(temp, screen)
