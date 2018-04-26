@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+var s = rand.NewSource(time.Now().UnixNano())
+var r = rand.New(s)
+
 var DefaultDrawColor []int = []int{0, 0, 0}
 
 // DrawLines draws an edge matrix onto a screen.
@@ -25,6 +28,7 @@ func DrawLines(edges [][]float64, screen [][][]int) {
 
 // DrawPolygons draws a polygon matrix onto a screen.
 func DrawPolygons(polygons [][]float64, screen [][][]int) {
+	fmt.Println()
 	for i := 0; i < len(polygons[0])-2; i += 3 {
 		point0 := ExtractColumn(polygons, i)
 		point1 := ExtractColumn(polygons, i+1)
@@ -40,32 +44,42 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 		x1, y1 := point1[0], point1[1]
 		x2, y2 := point2[0], point2[1]
 
+		RandomizeColor()
 		DrawLine(screen, x0, y0, x1, y1)
 		DrawLine(screen, x1, y1, x2, y2)
 		DrawLine(screen, x2, y2, x0, y0)
-
 		FillPolygon(screen, point0, point1, point2)
 	}
 }
 
 // FillPolygon fills a polygon on a screen via scanline.
 func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
-	points := [][]float64{p0, p1, p2}
-	points = sortPolygonPoints(points)
-	top, mid, btm := points[0], points[1], points[2]
+	top, mid, btm := sortedPolygonPoints([][]float64{p0, p1, p2})
 
-	fmt.Println("handle special cases...")
-
+	x0, x1 := btm[0], btm[0]
 	x0Inc := (top[0] - btm[0]) / (top[1] - btm[1])
 	x1Inc := (mid[0] - btm[0]) / (mid[1] - btm[1])
 
-	x0, x1 := btm[0], btm[0]
-	for y := btm[1]; y < top[1]; y++ {
-		for x := x0; x < x1; x++ {
-			if y == mid[1] {
-				x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
-			}
-			RandomizeColor()
+	y0, y1 := btm[1], top[1]
+	yInc := 1.0
+
+	if mid[1] == btm[1] {
+		// If middle and bottom at same level, we want to scanline from top down.
+		x0, x1 = top[0], top[0]
+		x1Inc = (mid[0] - top[0]) / (top[1] - mid[1])
+		x0Inc *= -1
+
+		y0, y1 = top[1], btm[1]
+		yInc = -1.0
+	}
+
+	xInc := math.Abs(x1Inc - x0Inc) / (x1Inc - x0Inc)
+
+	for y := y0; yInc*(y1 - y) > 0; y += yInc {
+		if float64ToInt(y) == float64ToInt(mid[1]) {
+			x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
+		}
+		for x := x0; xInc*(x1 - x) > 0; x += xInc {
 			plot(screen, x, y)
 		}
 		x0 += x0Inc
@@ -73,8 +87,8 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	}
 }
 
-func sortPolygonPoints(points [][]float64) (output [][]float64) {
-	output = make([][]float64, 3, 3)
+func sortedPolygonPoints(points [][]float64) (a, b, c []float64) {
+	output := make([][]float64, 3, 3)
 	for i := 0; i < 3; i++ {
 		maxY := -1.0
 		maxJ := -1
@@ -87,16 +101,13 @@ func sortPolygonPoints(points [][]float64) (output [][]float64) {
 		output[i] = points[maxJ]
 		points = append(points[:maxJ], points[maxJ+1:]...)
 	}
+	a, b, c = output[0], output[1], output[2]
 	return
 }
 
 // RandomizeColor randomizes the DefaultDrawColor.
 func RandomizeColor() {
-	s := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(s)
-	for i := 0; i < len(DefaultDrawColor); i++ {
-		DefaultDrawColor[i] = r.Intn(255)
-	}
+	DefaultDrawColor = []int{r.Intn(255), r.Intn(255), r.Intn(255)}
 }
 
 // AddPoint adds a point to an edge matrix.
@@ -213,7 +224,7 @@ func AddBox(m [][]float64, a ...float64) {
 // AddSphere adds all the points for a sphere with center (cx, cy, cz) and
 // radius r.
 func AddSphere(m [][]float64, a ...float64) {
-	step := 50
+	step := 10
 	points := GenerateSphere(a[0], a[1], a[2], a[3], step)
 	latStop, lngStop := step, step
 
