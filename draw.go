@@ -5,6 +5,8 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand"
+	"time"
 )
 
 var DefaultDrawColor []int = []int{0, 0, 0}
@@ -46,13 +48,29 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 	}
 }
 
-// FillPolygon scanline fills a polygon on a screen.
+// FillPolygon fills a polygon on a screen via scanline.
 func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	points := [][]float64{p0, p1, p2}
 	points = sortPolygonPoints(points)
 	top, mid, btm := points[0], points[1], points[2]
-	// handle special cases
-	fmt.Println(0)
+
+	fmt.Println("handle special cases...")
+
+	x0Inc := (top[0] - btm[0]) / (top[1] - btm[1])
+	x1Inc := (mid[0] - btm[0]) / (mid[1] - btm[1])
+
+	x0, x1 := btm[0], btm[0]
+	for y := btm[1]; y < top[1]; y++ {
+		for x := x0; x < x1; x++ {
+			if y == mid[1] {
+				x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
+			}
+			RandomizeColor()
+			plot(screen, x, y)
+		}
+		x0 += x0Inc
+		x1 += x1Inc
+	}
 }
 
 func sortPolygonPoints(points [][]float64) (output [][]float64) {
@@ -70,6 +88,15 @@ func sortPolygonPoints(points [][]float64) (output [][]float64) {
 		points = append(points[:maxJ], points[maxJ+1:]...)
 	}
 	return
+}
+
+// RandomizeColor randomizes the DefaultDrawColor.
+func RandomizeColor() {
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+	for i := 0; i < len(DefaultDrawColor); i++ {
+		DefaultDrawColor[i] = r.Intn(255)
+	}
 }
 
 // AddPoint adds a point to an edge matrix.
