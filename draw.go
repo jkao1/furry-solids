@@ -11,6 +11,7 @@ var DefaultDrawColor []int = []int{0, 0, 0}
 
 // DrawLines draws an edge matrix onto a screen.
 func DrawLines(edges [][]float64, screen [][][]int) {
+	PrintMatrix(edges)
 	for i := 0; i < len(edges[0])-1; i += 2 {
 		point := ExtractColumn(edges, i)
 		nextPoint := ExtractColumn(edges, i+1)
@@ -48,26 +49,25 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 // FillPolygon scanline fills a polygon on a screen.
 func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	points := [][]float64{p0, p1, p2}
-	points = sortPoints(points)
-	fmt.Println(points)
+	points = sortPolygonPoints(points)
+	top, mid, btm := points[0], points[1], points[2]
+	// handle special cases
+	fmt.Println(0)
 }
 
-func sortPoints(points [][]float64) (output [][]float64) {
-	output = make([][]float64, len(points))
-	for {
+func sortPolygonPoints(points [][]float64) (output [][]float64) {
+	output = make([][]float64, 3, 3)
+	for i := 0; i < 3; i++ {
 		maxY := -1.0
-		maxI := -1
-		for i := 0; i < len(points); i++ {
-			if points[i][1] > maxY {
-				maxY = points[i][1]
-				maxI = i
+		maxJ := -1
+		for j := 0; j < len(points); j++ {
+			if points[j][1] > maxY {
+				maxY = points[j][1]
+				maxJ = j
 			}
 		}
-		output = append(output, points[maxI])
-		points = append(points[:maxI], points[maxI+1:]...)
-		if len(output) == cap(output) {
-			break
-		}
+		output[i] = points[maxJ]
+		points = append(points[:maxJ], points[maxJ+1:]...)
 	}
 	return
 }
