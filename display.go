@@ -16,15 +16,26 @@ const PPMFilename = "pic.ppm"
 // screen.
 func NewScreen() (screen [][][]int) {
 	screen = make([][][]int, YRES)
-
-	for i, _ := range screen {
+	for i := range screen {
 		screen[i] = make([][]int, XRES)
-
-		for j, _ := range screen[i] {
+		for j := range screen[i] {
 			screen[i][j] = []int{255, 255, 255}
 		}
 	}
+	return
+}
 
+// NewZBuffer creates a new z-buffer of size XRES by YRES. It returns the new
+// z-buffer.
+func NewZBuffer() (zbuffer [][]int) {
+	zbuffer = make([][]int, YRES) {
+		for i := range zbuffer {
+			zbuffer[i] = make([]int, XRES)
+			for j := range zbuffer[i] {
+				zbuffer[i][j] = math.MinInt64
+			}
+		}
+	}
 	return
 }
 

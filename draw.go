@@ -12,6 +12,8 @@ import (
 var s = rand.NewSource(time.Now().UnixNano())
 var r = rand.New(s)
 
+var ZBuffer [][]int = NewZBuffer()
+
 var DefaultDrawColor []int = []int{0, 0, 0}
 
 // DrawLines draws an edge matrix onto a screen.
@@ -420,9 +422,12 @@ func SetColor(color string) {
 // plot draws a point (x, y) onto a screen with the default draw color.
 func plot(screen [][][]int, x, y float64) {
 	newX, newY := float64ToInt(x), YRES-float64ToInt(y)-1
-	if newX >= 0 && newX < XRES && newY >= 0 && newY < YRES {
-		screen[newY][newX] = DefaultDrawColor[:]
+	if !(newX >= 0 && newX < XRES && newY >= 0 && newY < YRES) {
+		return
 	}
+
+	
+	screen[newY][newX] = DefaultDrawColor[:]
 }
 
 // DrawLineFromParams gets arguments from a params slice.
