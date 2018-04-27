@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 )
@@ -28,12 +29,11 @@ func NewScreen() (screen [][][]int) {
 // NewZBuffer creates a new z-buffer of size XRES by YRES. It returns the new
 // z-buffer.
 func NewZBuffer() (zbuffer [][]int) {
-	zbuffer = make([][]int, YRES) {
-		for i := range zbuffer {
-			zbuffer[i] = make([]int, XRES)
-			for j := range zbuffer[i] {
-				zbuffer[i][j] = math.MinInt64
-			}
+	zbuffer = make([][]int, YRES)
+	for i := range zbuffer {
+		zbuffer[i] = make([]int, XRES)
+		for j := range zbuffer[i] {
+			zbuffer[i][j] = math.MinInt64
 		}
 	}
 	return

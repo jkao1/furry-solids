@@ -22,15 +22,14 @@ func DrawLines(edges [][]float64, screen [][][]int) {
 	for i := 0; i < len(edges[0])-1; i += 2 {
 		point := ExtractColumn(edges, i)
 		nextPoint := ExtractColumn(edges, i+1)
-		x0, y0 := point[0], point[1]
-		x1, y1 := nextPoint[0], nextPoint[1]
-		DrawLine(screen, x0, y0, x1, y1)
+		x0, y0, z0 := point[0], point[1], point[2]
+		x1, y1, z1 := nextPoint[0], nextPoint[1], nextPoint[2]
+		DrawLine(screen, x0, y0, z0, x1, y1, z1)
 	}
 }
 
 // DrawPolygons draws a polygon matrix onto a screen.
 func DrawPolygons(polygons [][]float64, screen [][][]int) {
-	fmt.Println()
 	for i := 0; i < len(polygons[0])-2; i += 3 {
 		point0 := ExtractColumn(polygons, i)
 		point1 := ExtractColumn(polygons, i+1)
@@ -42,14 +41,16 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 			continue
 		}
 
-		x0, y0 := point0[0], point0[1]
-		x1, y1 := point1[0], point1[1]
-		x2, y2 := point2[0], point2[1]
+		x0, y0, z0 := point0[0], point0[1], point0[2]
+		x1, y1, z1 := point1[0], point1[1], point1[2]
+		x2, y2, z2 := point2[0], point2[1], point2[2]
+
+		fmt.Println(point0, point1, point2)
 
 		RandomizeColor()
-		DrawLine(screen, x0, y0, x1, y1)
-		DrawLine(screen, x1, y1, x2, y2)
-		DrawLine(screen, x2, y2, x0, y0)
+		DrawLine(screen, x0, y0, z0, x1, y1, z1)
+		DrawLine(screen, x1, y1, z1, x2, y2, z2)
+		DrawLine(screen, x2, y2, z2, x0, y0, z0)
 		FillPolygon(screen, point0, point1, point2)
 	}
 }
@@ -75,17 +76,19 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 		yInc = -1.0
 	}
 
-	xInc := math.Abs(x1Inc - x0Inc) / (x1Inc - x0Inc)
+	z0, z1 := top[0], top[0]
+	z0Inc := (top[2] - btm[2]) / (top[1] - btm[1])
+	z1Inc := (mid[2] - btm[2]) / (mid[1] - btm[1])
 
 	for y := y0; yInc*(y1 - y) > 0; y += yInc {
 		if float64ToInt(y) == float64ToInt(mid[1]) {
 			x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
 		}
-		for x := x0; xInc*(x1 - x) > 0; x += xInc {
-			plot(screen, x, y)
-		}
+		DrawLine(screen, x0, y, z0, x1, y, z1)
 		x0 += x0Inc
 		x1 += x1Inc
+		z0 += z0Inc
+		z1 += z1Inc
 	}
 }
 
@@ -327,16 +330,16 @@ func CubicEval(x float64, coefs [][]float64) (y float64) {
 }
 
 // DrawLine draws a line from (x0, y0) to (x1, y1) onto a screen.
-func DrawLine(screen [][][]int, x0, y0, x1, y1 float64) {
+func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 float64) {
 	if x1 < x0 {
 		x0, x1 = x1, x0
 		y0, y1 = y1, y0
+		z0, z1 = z1, z0
 	}
 
 	A := y1 - y0
 	B := x0 - x1
-	x := x0
-	y := y0
+	x, y, z := x0, y0, z0
 
 	if B == 0 { // vertical line
 		if y1 < y0 {
@@ -344,9 +347,11 @@ func DrawLine(screen [][][]int, x0, y0, x1, y1 float64) {
 		}
 
 		y = y0
+		zInc := (y1-y0) / (z1-z0)
 		for y <= y1 {
-			plot(screen, x, y)
+			plot(screen, x, y, z)
 			y++
+			z += zInc
 		}
 
 		return
@@ -354,55 +359,64 @@ func DrawLine(screen [][][]int, x0, y0, x1, y1 float64) {
 
 	slope := A / (-B)
 	var d float64
+	var dz float64
 
 	if slope >= 0 && slope <= 1 { // octant 1
 		d = 2*A + B
+		dz = (z1-z0) / (x1-x0)
 		for x <= x1 && y <= y1 {
-			plot(screen, x, y)
+			plot(screen, x, y, z)
 			if d > 0 {
 				y++
 				d += 2 * B
 			}
 			x++
+			z += dz
 			d += 2 * A
 		}
 	}
 
 	if slope > 1 { // octant 2
 		d = A + 2*B
+		dz = (z1-z0) / (y1-y0)
 		for x <= x1 && y <= y1 {
-			plot(screen, x, y)
+			plot(screen, x, y, z)
 			if d < 0 {
 				x++
 				d += 2 * A
 			}
 			y++
+			z += dz
 			d += 2 * B
 		}
 	}
 
 	if slope < 0 && slope >= -1 { // octant 8
 		d = 2*A - B
+		dz = (z1-z0) / (x1-x0)
 		for x <= x1 && y >= y1 {
-			plot(screen, x, y)
+			plot(screen, x, y, z)
 			if d < 0 {
 				y--
 				d -= 2 * B
 			}
 			x++
+			z += dz
 			d += 2 * A
 		}
 	}
 
 	if slope < -1 { // octant 7
 		d = A - 2*B
+		dz = (z1-z0) / (y1-y0)
 		for x <= x1 && y >= y1 {
-			plot(screen, x, y)
+			plot(screen, x, y, z)
 			if d > 0 {
 				x++
 				d += 2 * A
 			}
 			y--
+			z += dz
 			d -= 2 * B
 		}
 	}
@@ -420,20 +434,43 @@ func SetColor(color string) {
 }
 
 // plot draws a point (x, y) onto a screen with the default draw color.
-func plot(screen [][][]int, x, y float64) {
-	newX, newY := float64ToInt(x), YRES-float64ToInt(y)-1
+func plot(screen [][][]int, x, y, z float64) {
+	newX, newY, newZ := float64ToInt(x), YRES-float64ToInt(y)-1, float64ToInt(z)
 	if !(newX >= 0 && newX < XRES && newY >= 0 && newY < YRES) {
 		return
 	}
 
-	
-	screen[newY][newX] = DefaultDrawColor[:]
+	if newZ > ZBuffer[newY][newX] {
+		screen[newY][newX] = DefaultDrawColor[:]
+		ZBuffer[newY][newX] = newZ
+	}
+}
+
+// plotColor draws a point (x, y) onto a screen with the default draw color.
+func plotColor(screen [][][]int, x, y, z float64, color []int) {
+	newX, newY, newZ := float64ToInt(x), YRES-float64ToInt(y)-1, float64ToInt(z)
+	if !(newX >= 0 && newX < XRES && newY >= 0 && newY < YRES) {
+		return
+	}
+
+	if newZ > ZBuffer[newY][newX] {
+		screen[newY][newX] = color[:]
+		ZBuffer[newY][newX] = newZ
+	}
 }
 
 // DrawLineFromParams gets arguments from a params slice.
 func DrawLineFromParams(screen [][][]int, params ...float64) {
 	if len(params) >= 4 {
-		DrawLine(screen, params[0], params[1], params[2], params[3])
+		DrawLine(
+			screen,
+			params[0],
+			params[1],
+			params[2],
+			params[3],
+			params[4],
+			params[5],
+		)
 	}
 }
 
