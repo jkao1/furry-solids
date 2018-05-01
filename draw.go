@@ -41,7 +41,7 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 		A := vectorSubtract(point1, point0)[:2]
 		B := vectorSubtract(point2, point0)[:2]
 		if A[0] * B[1] - A[1] * B[0] <= 0 {
-			continue
+			// continue
 		}
 
 		x0, y0, z0 := point0[0], point0[1], point0[2]
@@ -94,6 +94,7 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 		z1 += z1Inc
 	}
 
+	x1 = mid[0]
 	x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
 	z1 = mid[2]
 	z1Inc = (top[2] - mid[2]) / (top[1] - mid[1])
