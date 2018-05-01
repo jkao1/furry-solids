@@ -18,6 +18,9 @@ var DefaultDrawColor []int = []int{0, 0, 0}
 
 // DrawLines draws an edge matrix onto a screen.
 func DrawLines(edges [][]float64, screen [][][]int) {
+	if len(edges) % 2 != 0 {
+		fmt.Println("DrawLines invalid.")
+	}
 	PrintMatrix(edges)
 	for i := 0; i < len(edges[0])-1; i += 2 {
 		point := ExtractColumn(edges, i)
@@ -45,8 +48,6 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 		x1, y1, z1 := point1[0], point1[1], point1[2]
 		x2, y2, z2 := point2[0], point2[1], point2[2]
 
-		fmt.Println(point0, point1, point2)
-
 		RandomizeColor()
 		DrawLine(screen, x0, y0, z0, x1, y1, z1)
 		DrawLine(screen, x1, y1, z1, x2, y2, z2)
@@ -63,7 +64,7 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	x0Inc := (top[0] - btm[0]) / (top[1] - btm[1])
 	x1Inc := (mid[0] - btm[0]) / (mid[1] - btm[1])
 
-	y0, y1 := btm[1], top[1]
+	y0, y1, y2 := btm[1], mid[1], top[1]
 	yInc := 1.0
 
 	if mid[1] == btm[1] {
@@ -72,7 +73,7 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 		x1Inc = (mid[0] - top[0]) / (top[1] - mid[1])
 		x0Inc *= -1
 
-		y0, y1 = top[1], btm[1]
+		y2, y0 = btm[1], top[1]
 		yInc = -1.0
 	}
 
@@ -81,9 +82,16 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	z1Inc := (mid[2] - btm[2]) / (mid[1] - btm[1])
 
 	for y := y0; yInc*(y1 - y) > 0; y += yInc {
-		if float64ToInt(y) == float64ToInt(mid[1]) {
-			x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
-		}
+		DrawLine(screen, x0, y, z0, x1, y, z1)
+		x0 += x0Inc
+		x1 += x1Inc
+		z0 += z0Inc
+		z1 += z1Inc
+	}
+
+	x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
+
+	for y := y1; yInc*(y2-y) > 0; y += yInc {
 		DrawLine(screen, x0, y, z0, x1, y, z1)
 		x0 += x0Inc
 		x1 += x1Inc
@@ -476,6 +484,7 @@ func DrawLineFromParams(screen [][][]int, params ...float64) {
 
 // float64ToInt rounds a float64 without truncating it. It returns an int.
 func float64ToInt(f float64) int {
+	return int(f) // just added
 	if f-float64(int(f)) < 0.5 {
 		return int(f)
 	}
