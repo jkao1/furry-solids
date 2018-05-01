@@ -52,6 +52,7 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 		DrawLine(screen, x0, y0, z0, x1, y1, z1)
 		DrawLine(screen, x1, y1, z1, x2, y2, z2)
 		DrawLine(screen, x2, y2, z2, x0, y0, z0)
+
 		FillPolygon(screen, point0, point1, point2)
 	}
 }
@@ -67,19 +68,23 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	y0, y1, y2 := btm[1], mid[1], top[1]
 	yInc := 1.0
 
+	z0, z1 := top[2], top[2]
+	z0Inc := (top[2] - btm[2]) / (top[1] - btm[1])
+	z1Inc := (mid[2] - btm[2]) / (mid[1] - btm[1])
+
 	if mid[1] == btm[1] {
 		// If middle and bottom at same level, we want to scanline from top down.
 		x0, x1 = top[0], top[0]
-		x1Inc = (mid[0] - top[0]) / (top[1] - mid[1])
 		x0Inc *= -1
+		x1Inc = (mid[0] - top[0]) / (top[1] - mid[1])
 
 		y2, y0 = btm[1], top[1]
 		yInc = -1.0
-	}
 
-	z0, z1 := top[0], top[0]
-	z0Inc := (top[2] - btm[2]) / (top[1] - btm[1])
-	z1Inc := (mid[2] - btm[2]) / (mid[1] - btm[1])
+		z0, z1 = btm[2], btm[2]
+		z0Inc *= -1
+		z1Inc = (mid[2] - top[2]) / (top[1] - mid[1])
+	}
 
 	for y := y0; yInc*(y1 - y) > 0; y += yInc {
 		DrawLine(screen, x0, y, z0, x1, y, z1)
@@ -90,6 +95,8 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	}
 
 	x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
+	z1 = mid[2]
+	z1Inc = (top[2] - mid[2]) / (top[1] - mid[1])
 
 	for y := y1; yInc*(y2-y) > 0; y += yInc {
 		DrawLine(screen, x0, y, z0, x1, y, z1)
@@ -101,8 +108,11 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 }
 
 func sortedPolygonPoints(points [][]float64) (a, b, c []float64) {
+	if len(points) != 3 {
+		fmt.Printf("Polygon points not given: %v\n", points)
+	}
 	output := make([][]float64, 3, 3)
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		maxY := -1.0
 		maxJ := -1
 		for j := 0; j < len(points); j++ {
@@ -114,6 +124,7 @@ func sortedPolygonPoints(points [][]float64) (a, b, c []float64) {
 		output[i] = points[maxJ]
 		points = append(points[:maxJ], points[maxJ+1:]...)
 	}
+	output[2] = points[0]
 	a, b, c = output[0], output[1], output[2]
 	return
 }
@@ -484,7 +495,6 @@ func DrawLineFromParams(screen [][][]int, params ...float64) {
 
 // float64ToInt rounds a float64 without truncating it. It returns an int.
 func float64ToInt(f float64) int {
-	return int(f) // just added
 	if f-float64(int(f)) < 0.5 {
 		return int(f)
 	}
