@@ -86,6 +86,18 @@ func MultiplyMatricesSwitched(m1Ptr, m2Ptr *[][]float64) {
 	*m1Ptr = product
 }
 
+// ExtractColumnInt extracts the column of a matrix. It returns that column as
+// a slice of ints.
+func ExtractColumnInt(matrix [][]float64, colIndex int) []int {
+	col := make([]int, len(matrix))
+
+	for i, _ := range matrix {
+		col[i] = int(matrix[i][colIndex])
+	}
+
+	return col
+}
+
 // ExtractColumn extracts the column of a matrix. It returns that column as
 // a slice.
 func ExtractColumn(matrix [][]float64, colIndex int) []float64 {

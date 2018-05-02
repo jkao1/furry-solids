@@ -23,8 +23,8 @@ func DrawLines(edges [][]float64, screen [][][]int) {
 	}
 	PrintMatrix(edges)
 	for i := 0; i < len(edges[0])-1; i += 2 {
-		point := ExtractColumn(edges, i)
-		nextPoint := ExtractColumn(edges, i+1)
+		point := ExtractColumnInt(edges, i)
+		nextPoint := ExtractColumnInt(edges, i+1)
 		x0, y0, z0 := point[0], point[1], point[2]
 		x1, y1, z1 := nextPoint[0], nextPoint[1], nextPoint[2]
 		DrawLine(screen, x0, y0, z0, x1, y1, z1)
@@ -41,18 +41,10 @@ func DrawPolygons(polygons [][]float64, screen [][][]int) {
 		A := vectorSubtract(point1, point0)[:2]
 		B := vectorSubtract(point2, point0)[:2]
 		if A[0] * B[1] - A[1] * B[0] <= 0 {
-			// continue
+			continue
 		}
 
-		x0, y0, z0 := point0[0], point0[1], point0[2]
-		x1, y1, z1 := point1[0], point1[1], point1[2]
-		x2, y2, z2 := point2[0], point2[1], point2[2]
-
 		RandomizeColor()
-		DrawLine(screen, x0, y0, z0, x1, y1, z1)
-		DrawLine(screen, x1, y1, z1, x2, y2, z2)
-		DrawLine(screen, x2, y2, z2, x0, y0, z0)
-
 		FillPolygon(screen, point0, point1, point2)
 	}
 }
@@ -62,49 +54,46 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	top, mid, btm := sortedPolygonPoints([][]float64{p0, p1, p2})
 
 	x0, x1 := btm[0], btm[0]
-	x0Inc := (top[0] - btm[0]) / (top[1] - btm[1])
-	x1Inc := (mid[0] - btm[0]) / (mid[1] - btm[1])
+	z0, z1 := btm[2], btm[2]
+	y := int(btm[1])
 
-	y0, y1, y2 := btm[1], mid[1], top[1]
-	yInc := 1.0
+	d0 := float64(int(top[1]) - y)
+	d1 := float64(int(mid[1]) - y)
+	d2 := float64(int(top[1]) - int(mid[1]))
 
-	z0, z1 := top[2], top[2]
-	z0Inc := (top[2] - btm[2]) / (top[1] - btm[1])
-	z1Inc := (mid[2] - btm[2]) / (mid[1] - btm[1])
-
-	if mid[1] == btm[1] {
-		// If middle and bottom at same level, we want to scanline from top down.
-		x0, x1 = top[0], top[0]
-		x0Inc *= -1
-		x1Inc = (mid[0] - top[0]) / (top[1] - mid[1])
-
-		y2, y0 = btm[1], top[1]
-		yInc = -1.0
-
-		z0, z1 = btm[2], btm[2]
-		z0Inc *= -1
-		z1Inc = (mid[2] - top[2]) / (top[1] - mid[1])
+	var dx0, dx1, dz0, dz1 float64
+	if d0 == 0 {
+		dx0, dz0 = 0, 0
+	} else {
+		dx0 = (top[0] - btm[0]) / d0
+		dz0 = (top[2] - btm[2]) / d0
+	}
+	if d1 == 0 {
+		dx1, dz1 = 0, 0
+	} else {
+		dx1 = (mid[0] - btm[0]) / d1
+		dz0 = (mid[2] - btm[2]) / d1
 	}
 
-	for y := y0; yInc*(y1 - y) > 0; y += yInc {
-		DrawLine(screen, x0, y, z0, x1, y, z1)
-		x0 += x0Inc
-		x1 += x1Inc
-		z0 += z0Inc
-		z1 += z1Inc
-	}
+	flipped := false
+	for y <= int(top[1]) {
+		DrawLine(screen, int(x0), y, int(z0), int(x1), y, int(z1))
+		x0 += dx0
+		x1 += dx1
+		z0 += dz0
+		z1 += dz1
+		y++
 
-	x1 = mid[0]
-	x1Inc = (top[0] - mid[0]) / (top[1] - mid[1])
-	z1 = mid[2]
-	z1Inc = (top[2] - mid[2]) / (top[1] - mid[1])
-
-	for y := y1; yInc*(y2-y) > 0; y += yInc {
-		DrawLine(screen, x0, y, z0, x1, y, z1)
-		x0 += x0Inc
-		x1 += x1Inc
-		z0 += z0Inc
-		z1 += z1Inc
+		if !flipped && y >= int(mid[1]) {
+			flipped = true
+			if d2 == 0 {
+				dx1, dz1 = 0, 0
+			} else {
+				dx1 = (top[0] - mid[0]) / d2
+				dz1 = (top[2] - mid[2]) / d2
+				x1, z1 = mid[0], mid[2]
+			}
+		}
 	}
 }
 
@@ -114,7 +103,7 @@ func sortedPolygonPoints(points [][]float64) (a, b, c []float64) {
 	}
 	output := make([][]float64, 3, 3)
 	for i := 0; i < 2; i++ {
-		maxY := -1.0
+		maxY := float64(math.MinInt64)
 		maxJ := -1
 		for j := 0; j < len(points); j++ {
 			if points[j][1] > maxY {
@@ -350,7 +339,7 @@ func CubicEval(x float64, coefs [][]float64) (y float64) {
 }
 
 // DrawLine draws a line from (x0, y0) to (x1, y1) onto a screen.
-func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 float64) {
+func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
 	if x1 < x0 {
 		x0, x1 = x1, x0
 		y0, y1 = y1, y0
@@ -367,7 +356,10 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 float64) {
 		}
 
 		y = y0
-		zInc := (y1-y0) / (z1-z0)
+		zInc := 0
+		if z1 != z0 {
+			zInc = (y1-y0) / (z1-z0)
+		}
 		for y <= y1 {
 			plot(screen, x, y, z)
 			y++
@@ -378,8 +370,8 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 float64) {
 	}
 
 	slope := A / (-B)
-	var d float64
-	var dz float64
+	var d int
+	var dz int
 
 	if slope >= 0 && slope <= 1 { // octant 1
 		d = 2*A + B
@@ -454,28 +446,28 @@ func SetColor(color string) {
 }
 
 // plot draws a point (x, y) onto a screen with the default draw color.
-func plot(screen [][][]int, x, y, z float64) {
-	newX, newY, newZ := float64ToInt(x), YRES-float64ToInt(y)-1, float64ToInt(z)
-	if !(newX >= 0 && newX < XRES && newY >= 0 && newY < YRES) {
+func plot(screen [][][]int, x, y, z int) {
+	y = YRES - y
+	if !(x >= 0 && x < XRES && y >= 0 && y < YRES) {
 		return
 	}
 
-	if newZ > ZBuffer[newY][newX] {
-		screen[newY][newX] = DefaultDrawColor[:]
-		ZBuffer[newY][newX] = newZ
+	if z > ZBuffer[y][x] {
+		screen[y][x] = DefaultDrawColor[:]
+		ZBuffer[y][x] = z
 	}
 }
 
 // plotColor draws a point (x, y) onto a screen with the default draw color.
-func plotColor(screen [][][]int, x, y, z float64, color []int) {
-	newX, newY, newZ := float64ToInt(x), YRES-float64ToInt(y)-1, float64ToInt(z)
-	if !(newX >= 0 && newX < XRES && newY >= 0 && newY < YRES) {
+func plotColor(screen [][][]int, x, y, z int, color []int) {
+	y = YRES - y
+	if !(x >= 0 && x < XRES && y >= 0 && y < YRES) {
 		return
 	}
 
-	if newZ > ZBuffer[newY][newX] {
-		screen[newY][newX] = color[:]
-		ZBuffer[newY][newX] = newZ
+	if z > ZBuffer[y][x] {
+		screen[y][x] = color[:]
+		ZBuffer[y][x] = z
 	}
 }
 
@@ -484,12 +476,12 @@ func DrawLineFromParams(screen [][][]int, params ...float64) {
 	if len(params) >= 4 {
 		DrawLine(
 			screen,
-			params[0],
-			params[1],
-			params[2],
-			params[3],
-			params[4],
-			params[5],
+			int(params[0]),
+			int(params[1]),
+			int(params[2]),
+			int(params[3]),
+			int(params[4]),
+			int(params[5]),
 		)
 	}
 }
