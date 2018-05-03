@@ -1,8 +1,10 @@
 push
 rotate
-y -5
-triangle
-10 10 0 400 10 0 200 250 0
-triangle
-10 20 1 400 20 1 200 260 1
+y -10
+rotate
+x -20
+box
+200 200 0 100 100 100
+box
+200 310 0 100 100 100
 display

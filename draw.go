@@ -12,7 +12,7 @@ import (
 var s = rand.NewSource(time.Now().UnixNano())
 var r = rand.New(s)
 
-var ZBuffer [][]int = NewZBuffer()
+var ZBuffer [][]float64 = NewZBuffer()
 
 var DefaultDrawColor []int = []int{0, 0, 0}
 
@@ -23,11 +23,11 @@ func DrawLines(edges [][]float64, screen [][][]int) {
 	}
 	PrintMatrix(edges)
 	for i := 0; i < len(edges[0])-1; i += 2 {
-		point := ExtractColumnInt(edges, i)
-		nextPoint := ExtractColumnInt(edges, i+1)
+		point := ExtractColumn(edges, i)
+		nextPoint := ExtractColumn(edges, i+1)
 		x0, y0, z0 := point[0], point[1], point[2]
 		x1, y1, z1 := nextPoint[0], nextPoint[1], nextPoint[2]
-		DrawLine(screen, x0, y0, z0, x1, y1, z1)
+		DrawLine(screen, int(x0), int(y0), z0, int(x1), int(y1), z1)
 	}
 }
 
@@ -62,22 +62,18 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 	d2 := float64(int(top[1]) - int(mid[1]))
 
 	var dx0, dx1, dz0, dz1 float64
-	if d0 == 0 {
-		dx0, dz0 = 0, 0
-	} else {
+	if d0 != 0 {
 		dx0 = (top[0] - btm[0]) / d0
 		dz0 = (top[2] - btm[2]) / d0
 	}
-	if d1 == 0 {
-		dx1, dz1 = 0, 0
-	} else {
+	if d1 != 0 {
 		dx1 = (mid[0] - btm[0]) / d1
 		dz0 = (mid[2] - btm[2]) / d1
 	}
 
 	flipped := false
 	for y <= int(top[1]) {
-		DrawLine(screen, int(x0), y, int(z0), int(x1), y, int(z1))
+		DrawLine(screen, int(x0), y, z0, int(x1), y, z1)
 		x0 += dx0
 		x1 += dx1
 		z0 += dz0
@@ -86,9 +82,7 @@ func FillPolygon(screen [][][]int, p0, p1, p2 []float64) {
 
 		if !flipped && y >= int(mid[1]) {
 			flipped = true
-			if d2 == 0 {
-				dx1, dz1 = 0, 0
-			} else {
+			if d2 != 0 {
 				dx1 = (top[0] - mid[0]) / d2
 				dz1 = (top[2] - mid[2]) / d2
 				x1, z1 = mid[0], mid[2]
@@ -163,11 +157,11 @@ func AddPolygon(
 // AddCircle adds a circle of center (cx, cy, cz) and radius r to an edge
 // matrix.
 func AddCircle(m [][]float64, params ...float64) {
-	cx, cy, _, r := params[0], params[1], params[2], params[3]
+	cx, cy, cz, r := params[0], params[1], params[2], params[3]
 	for t := 0.0; t <= 1.0; t += 0.001 {
 		x := r*math.Cos(2*math.Pi*t) + cx
 		y := r*math.Sin(2*math.Pi*t) + cy
-		AddPoint(m, x, y, 0)
+		AddPoint(m, x, y, cz)
 	}
 }
 
@@ -338,8 +332,12 @@ func CubicEval(x float64, coefs [][]float64) (y float64) {
 	return
 }
 
-// DrawLine draws a line from (x0, y0) to (x1, y1) onto a screen.
-func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
+// DrawLine draws a line from (x0, y0, z0) to (x1, y1, z1) onto a screen.
+func DrawLine(
+	screen [][][]int,
+	x0, y0 int, z0 float64,
+	x1, y1 int, z1 float64,
+) {
 	if x1 < x0 {
 		x0, x1 = x1, x0
 		y0, y1 = y1, y0
@@ -356,9 +354,9 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
 		}
 
 		y = y0
-		zInc := 0
+		zInc := 0.0
 		if z1 != z0 {
-			zInc = (y1-y0) / (z1-z0)
+			zInc = float64(y1-y0) / (z1-z0)
 		}
 		for y <= y1 {
 			plot(screen, x, y, z)
@@ -371,11 +369,11 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
 
 	slope := A / (-B)
 	var d int
-	var dz int
+	var dz float64
 
 	if slope >= 0 && slope <= 1 { // octant 1
 		d = 2*A + B
-		dz = (z1-z0) / (x1-x0)
+		dz = (z1-z0) / float64(x1-x0)
 		for x <= x1 && y <= y1 {
 			plot(screen, x, y, z)
 			if d > 0 {
@@ -390,7 +388,7 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
 
 	if slope > 1 { // octant 2
 		d = A + 2*B
-		dz = (z1-z0) / (y1-y0)
+		dz = (z1-z0) / float64(y1-y0)
 		for x <= x1 && y <= y1 {
 			plot(screen, x, y, z)
 			if d < 0 {
@@ -405,7 +403,7 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
 
 	if slope < 0 && slope >= -1 { // octant 8
 		d = 2*A - B
-		dz = (z1-z0) / (x1-x0)
+		dz = (z1-z0) / float64(x1-x0)
 		for x <= x1 && y >= y1 {
 			plot(screen, x, y, z)
 			if d < 0 {
@@ -420,7 +418,7 @@ func DrawLine(screen [][][]int, x0, y0, z0, x1, y1, z1 int) {
 
 	if slope < -1 { // octant 7
 		d = A - 2*B
-		dz = (z1-z0) / (y1-y0)
+		dz = (z1-z0) / float64(y1-y0)
 		for x <= x1 && y >= y1 {
 			plot(screen, x, y, z)
 			if d > 0 {
@@ -445,28 +443,25 @@ func SetColor(color string) {
 	}
 }
 
-// plot draws a point (x, y) onto a screen with the default draw color.
-func plot(screen [][][]int, x, y, z int) {
-	y = YRES - y
-	if !(x >= 0 && x < XRES && y >= 0 && y < YRES) {
-		return
-	}
-
-	if z > ZBuffer[y][x] {
-		screen[y][x] = DefaultDrawColor[:]
-		ZBuffer[y][x] = z
-	}
+func round(num float64) int {
+    return int(num + math.Copysign(0.5, num))
 }
 
-// plotColor draws a point (x, y) onto a screen with the default draw color.
-func plotColor(screen [][][]int, x, y, z int, color []int) {
-	y = YRES - y
+func toFixed(num float64, precision int) float64 {
+    output := math.Pow(10, float64(precision))
+    return float64(round(num * output)) / output
+}
+
+// plot draws a point (x, y) onto a screen with the default draw color.
+func plot(screen [][][]int, x, y int, z float64) {
+	y = YRES -  y
 	if !(x >= 0 && x < XRES && y >= 0 && y < YRES) {
 		return
 	}
 
-	if z > ZBuffer[y][x] {
-		screen[y][x] = color[:]
+	z = toFixed(z, 3)
+	if z >= ZBuffer[y][x] {
+		screen[y][x] = DefaultDrawColor[:]
 		ZBuffer[y][x] = z
 	}
 }
@@ -478,18 +473,10 @@ func DrawLineFromParams(screen [][][]int, params ...float64) {
 			screen,
 			int(params[0]),
 			int(params[1]),
-			int(params[2]),
+			float64(params[2]),
 			int(params[3]),
 			int(params[4]),
-			int(params[5]),
+			float64(params[5]),
 		)
 	}
-}
-
-// float64ToInt rounds a float64 without truncating it. It returns an int.
-func float64ToInt(f float64) int {
-	if f-float64(int(f)) < 0.5 {
-		return int(f)
-	}
-	return int(f + 1)
 }

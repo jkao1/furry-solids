@@ -28,12 +28,12 @@ func NewScreen() (screen [][][]int) {
 
 // NewZBuffer creates a new z-buffer of size XRES by YRES. It returns the new
 // z-buffer.
-func NewZBuffer() (zbuffer [][]int) {
-	zbuffer = make([][]int, YRES)
+func NewZBuffer() (zbuffer [][]float64) {
+	zbuffer = make([][]float64, YRES)
 	for i := range zbuffer {
-		zbuffer[i] = make([]int, XRES)
+		zbuffer[i] = make([]float64, XRES)
 		for j := range zbuffer[i] {
-			zbuffer[i][j] = math.MinInt64
+			zbuffer[i][j] = float64(math.MinInt64)
 		}
 	}
 	return
